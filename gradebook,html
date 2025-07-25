@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Gradebook</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .no-data-message {
+            text-align: center;
+            padding: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Student Gradebook</h1>
+        <button onclick="fetchGradeData()">Load Grades</button>
+        <table id="gradebook">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Total Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            </tbody>
+        </table>
+    </div>
+    <script>
+        async function fetchGradeData() {
+            const tbody = document.querySelector('#gradebook tbody');
+            tbody.innerHTML = '<tr><td colspan="2" class="no-data-message">Loading grades...</td></tr>';
+            try {
+                const response = await fetch('/api/grades');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                renderGradebook(data);
+
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="2" class="no-data-message" style="color: red;">Failed to load grade data. Please try again or check server connection.</td></tr>';
+                alert("Failed to load grade data. Check console for details.");
+            }
+        }
+        function renderGradebook(data) {
+            const tbody = document.querySelector('#gradebook tbody');
+            tbody.innerHTML = '';
+            if(data && data.length > 0) {
+                data.forEach(student => {
+                    const row = document.createElement('tr');
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = `${student.last_name} ${student.first_name}`;
+                    const gradeCell = document.createElement('td');
+                    gradeCell.textContent = student.total_grade !== null ? parseFloat(student.total_grade).toFixed(2) : 'N/A';
+                    row.appendChild(nameCell);
+                    row.appendChild(gradeCell);
+                    tbody.appendChild(row);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
