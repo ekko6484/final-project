@@ -1,0 +1,78 @@
+const express = require('express');
+const app = express();
+const router = express.Router();
+const path = require('path');
+const {Pool} = require('pg');
+const connectionString = 'postgres://postgres:CTI_110_WakeTech@localhost:5432/Gradebook_huy';
+const pool = new Pool({connectionString:connectionString})
+router.get('/', function(req, res){
+    res.sendFile(path.join(__dirname, 'gradebook.html'));
+});
+
+app.use("/", router);
+
+function fetchGradeData() {
+    console.log("Fetching grade data...");
+    let xhr = new XMLHttpRequest();
+    let apiRoute = "/api/grades";
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status !== 200) {
+                console.error('Could not get grades. Status: ${xhr.status}');
+                return;
+            }
+            const data = JSON.parse(xhr.responseText);
+            console.log("Populating gradebook with data:", data);
+            populateGradebook(data);
+        }
+    };
+    xhr.open("GET", apiRoute, true);
+    xhr.send();
+}
+
+function populateGradebook(data) {
+    console.log("Populating gradebook with data:", data);
+    let tableElm = document.getElementById("gradebook");
+    data.forEach(function(assignments) {
+        let row = document.createElement("tr");
+        let columns = [];
+        columns.name = document.createElement("td");
+        columns.name.appendChild(document.createTextNode(assignments.last_name + " " + assignments.first_name));
+        columns.grade = document.createElement("td");
+        columns.grade.appendChild(document.createTextNode(assignments.total_grade));
+        row.appendChild(columns.name);
+        row.appendChild(columns.grade);
+        tableElm.appendChild(row);
+    });
+}
+
+router.get('/api/grades',function(req, res){
+    pool.query(
+        'SELECT Students.student_id, first_name, last_name, AVG(assignments.grade) as total_grade \
+            FROM Students  \
+            LEFT JOIN Assignments ON Assignments.student_id = Students.student_id \
+            GROUP BY Students.student_id \
+            ORDER BY total_grade DESC',
+        [],
+        function( err, result){
+            if(err)
+            {
+                console.error(err);
+            }
+            
+            result.rows.forEach( 
+                    function(row){
+                        console.log('Student Name: ${row.first_name} ${row.last_name}');
+                        console.log('Grade: ${row.total_grade}');
+                    }
+            );
+            
+            res.status(200).json(result.rows);
+        }
+    );
+});
+
+let server = app.listen(3000, function(){
+    console.log("App Server via Express is listening on port 3000");
+    console.log("To quit, press CTRL + C");
+});
